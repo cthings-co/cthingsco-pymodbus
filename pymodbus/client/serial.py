@@ -9,9 +9,9 @@ from functools import partial
 
 from pymodbus.client.base import ModbusBaseClient, ModbusBaseSyncClient
 from pymodbus.exceptions import ConnectionException
-from pymodbus.framer import FramerType
+from pymodbus.framer import FramerType, FramerAscii, FramerRTU
 from pymodbus.logging import Log
-from pymodbus.pdu import ModbusPDU
+from pymodbus.pdu import ModbusPDU, DecodePDU
 from pymodbus.transport import CommParams, CommType
 
 
@@ -318,3 +318,79 @@ class ModbusSerialClient(ModbusBaseSyncClient):
             f"<{self.__class__.__name__} at {hex(id(self))} socket={self.socket}, "
             f"framer={self.framer}, timeout={self.comm_params.timeout_connect}>"
         )
+
+
+class ModbusFrameGenerator(ModbusSerialClient):
+    """A class to generate and parse Modbus frames without actual communication.
+    
+    This class provides a way to generate Modbus frames and parse responses
+    without actual serial communication.
+
+    :param framer: The framer to use (RTU or ASCII)
+    :param slave: Default slave address
+    
+    Example::
+        from pymodbus.client import ModbusFrameGenerator
+        from pymodbus.framer import FramerType
+        
+        generator = ModbusFrameGenerator(framer=FramerType.RTU, slave=1)
+        request = generator.read_coils(1, 10)
+        print(f"Generated frame: {request.hex()}")
+    """
+    
+    def __init__(
+        self,
+        framer: FramerType = FramerType.RTU,
+        slave: int = 0x00,
+    ) -> None:
+        """Initialize the frame generator."""
+        if framer not in [FramerType.ASCII, FramerType.RTU]:
+            raise TypeError("Only FramerType RTU/ASCII allowed.")
+        super().__init__(
+            port="DUMMY",
+            framer=framer,
+        )
+        self.slave = slave
+        self.socket = None  # Prevent actual serial operations
+        self.comm_params.timeout_connect = 0  # Prevent retries
+        self.retries = 0  # Disable retries
+
+    def build_request(self, request: ModbusPDU) -> bytes:
+        """Build a complete frame from a request PDU.
+        
+        :param request: The request PDU to frame
+        :returns: The framed request
+        """
+        request.dev_id = self.slave
+        return self.framer.buildFrame(request)
+
+    def execute(self, no_response_expected: bool, request: ModbusPDU) -> bytes:
+        """Override execute to only generate frame without sending."""
+        return self.build_request(request)
+
+    def send(self, request: bytes, addr: tuple | None = None) -> int:
+        """Don't actually send, just return the length of the request."""
+        return len(request) if request else 0
+
+    def recv(self, size: int | None) -> bytes:
+        """Dummy receive - always returns empty bytes."""
+        return b""
+
+    def close(self):
+        """Dummy close - does nothing."""
+        pass
+
+    def is_socket_open(self) -> bool:
+        """Always returns False since we're not actually connecting."""
+        return False
+
+    def parse_response(self, response: bytes) -> ModbusPDU:
+        """Parse a response frame into a PDU.
+        
+        :param response: The response frame to parse
+        :returns: The decoded PDU
+        """
+        used_len, pdu = self.framer.processIncomingFrame(response)
+        if not pdu:
+            raise ValueError("Failed to decode response")
+        return pdu
