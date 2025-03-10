@@ -12,6 +12,11 @@ PyModbus - A Python Modbus Stack
    :target: https://gurubase.io/g/pymodbus
    :alt: PyModbus Guru
 
+
+**This repository is a fork of https://github.com/pymodbus-dev/pymodbus and adds Modbus frame generation without the actual device
+to be connected. Use with caution!**
+
+
 Pymodbus is a full Modbus protocol implementation offering client/server with synchronous/asynchronous API and simulators.
 
 Our releases is defined as X.Y.Z, and we have strict rules what to release when:

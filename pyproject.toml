@@ -3,11 +3,11 @@ requires = ["setuptools>=68.2.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pymodbus"
+name = "cthingsco-pymodbus"
 dynamic = ["version"]
 license = {text = "BSD-3-Clause"}
 authors = [{name = "Galen Collins"}, {name = "Jan Iversen"}]
-maintainers = [{name = "dhoomakethu"}, {name = "janiversen"}]
+maintainers = [{name="Jan Kowalewski", email="jkowalewski@cthings.co"}]
 description = "A fully featured modbus protocol stack in python"
 keywords = ["modbus", "asyncio", "scada", "client", "server", "simulator"]
 readme = "README.rst"
